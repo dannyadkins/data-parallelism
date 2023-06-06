@@ -44,7 +44,6 @@ for grads_per_update in range(1, 20, 1):
 
     if (rank == 0):
         print("Running for ", grads_per_update, " grads per update")
-    grads_per_update = 5
 
     # Initial set-up: Store model parameters as a list for ease of access
     params = list(model.parameters())
