@@ -44,44 +44,42 @@ for grads_per_update in range(1, 20, 1):
 
     if (rank == 0):
         print("Running for ", grads_per_update, " grads per update")
-    for epoch in range(num_epochs):
-        
-        grads = [] 
-        for param in model.parameters():
-            grads.append(0)
+    grads_per_update = 5
 
+    # Initial set-up: Store model parameters as a list for ease of access
+    params = list(model.parameters())
+    n_params = len(params)
+    device = next(model.parameters()).device
+
+    # Initialize gradients holder
+    avg_grads = [torch.zeros_like(param, device=device) for param in params]
+
+    for epoch in range(num_epochs):
         for i in range(len(images)//batch_size):
             mini = slice(i*batch_size, (i+1)*batch_size)
 
             loss = fwd(model, optim, loss_fn, images[mini], labels[mini])
             loss.backward()
 
-            # add the gradients to grads list to create a sum 
-            j = 0
-            for param in model.parameters():
-                grads[j] = grads[j] + param.grad.data.cpu().numpy()
-                j += 1
+            # aggregate gradients
+            for j, param in enumerate(params):
+                avg_grads[j] += param.grad.data / grads_per_update
 
-            if (i % grads_per_update == 0):
-                # calculate the gradients and allreduce 
-                j = 0
-                for param in model.parameters():
-                    grad = grads[j]
-                    comm.Allreduce(MPI.IN_PLACE, grad, op=MPI.SUM)  # in-place sum of gradients across all GPUs
-                    avg_grad = torch.from_numpy(grad / grads_per_update / size ).to(device)  # convert back to tensor and average
-                    # update with the average gradient
-                    param.grad.data = avg_grad
-                    j += 1
+            if (i % grads_per_update == 0) or (i == len(images)//batch_size - 1):  # also update on last iteration
+                # allreduce and average gradients
+                for j in range(n_params):
+                    avg_grads[j] = avg_grads[j].cpu().numpy()
+                    comm.Allreduce(MPI.IN_PLACE, avg_grads[j], op=MPI.SUM)
+                    avg_grads[j] /= size
 
-                grads = []
-                for param in model.parameters():
-                    grads.append(0)
+                    # update parameters with averaged gradients
+                    params[j].grad.data = torch.tensor(avg_grads[j]).to(device)
 
-                
+                # reset the averaged gradients to zero for the next accumulation
+                avg_grads = [torch.zeros_like(param, device=device) for param in params]
+
                 # update the model parameters
                 optim.step()
-            
-            # print("Rank {0} epoch {1} batch {2} loss {3}".format(rank, epoch, i, loss.item()))
 
             training_curve.append(loss.item())
     
