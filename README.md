@@ -4,3 +4,7 @@
  - implement async gradient updates, model parallelism, tensor parallelism, and pipeline parallelism
  - implement proper data sharding using memmapping 
  - hardcode some different communication strategies like ring-allreduce 
+
+
+ Notes:
+ - getting "Triton Error [CUDA]: an illegal memory access was encountered" when I try to use my custom FusedAdam kernel 

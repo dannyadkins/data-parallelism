@@ -102,8 +102,8 @@ def train_model(comm, rank, size, device, model, optim, loss_fn, images, labels,
 
             loss = fwd(model, optim, loss_fn, images[mini], labels[mini])
             loss.backward()
-
-            print("Rank {0} epoch {1} loss: {2}".format(rank, epoch, loss.item()))
+            if (show_logs):
+                print("Rank {0} epoch {1} loss: {2}".format(rank, epoch, loss.item()))
             # calculate the gradients and allreduce 
             update_func(comm, rank, size, device, model, optim)
 

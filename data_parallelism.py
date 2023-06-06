@@ -27,7 +27,6 @@ training_curve = []
 
 # train the model for 10 epochs
 batch_size = 256
-num_epochs = 5
 
 def update_func(comm, rank, size, device, model, optim):
     for param in model.parameters():
@@ -40,10 +39,10 @@ def update_func(comm, rank, size, device, model, optim):
     # update the model parameters
     optim.step()
 
-train_model(comm, rank, size, device, model, optim, loss_fn, images, labels, update_func=update_func, num_epochs=10)
+train_model(comm, rank, size, device, model, optim, loss_fn, images, labels, update_func=update_func, num_epochs=100, show_logs=True, training_curve=training_curve)
 
 # plot the training curve
 plot_losses(training_curve, "dp_rank{0}_size{1}.png".format(rank,size))
 
 if rank == 0:
-    torch.save(model.state_dict(), "model.pt")
+    torch.save(model.state_dict(), "dp_rank{0}_size{1}.pt".format(rank,size))
