@@ -20,10 +20,10 @@ def init_model(comm, rank, device):
     else:
         model = comm.bcast(None, root=0).to(device)
     # print the first few model parameters to make sure they're the same 
-    print("Rank {0} model parameters:".format(rank))
-    for param in model.parameters():
-        print(param[0][0][0][0])
-        break
+    # print("Rank {0} model parameters:".format(rank))
+    # for param in model.parameters():
+    #     print(param[0][0][0][0])
+    #     break
 
     return model 
 
@@ -61,6 +61,19 @@ def preprocess_data(images, labels):
 def get_full_dataset():
     raw_images, raw_labels = get_raw_data()
     return preprocess_data(raw_images, raw_labels)
+
+def test_model(model, device):
+    # get test split
+    test_dataset = load_dataset('mnist', split='test')
+    test_images, test_labels = preprocess_data(test_dataset['image'], test_dataset['label'])
+    test_images = test_images.to(device)
+    test_labels = test_labels.to(device)
+    # get predictions
+    predictions = model(test_images[:512])
+    # get accuracy
+    accuracy = (predictions.argmax(dim=1) == test_labels[:512]).float().mean()
+    return accuracy
+
 
 # get the shard of the data corresponding to this rank
 def get_shard(data, rank, size):
